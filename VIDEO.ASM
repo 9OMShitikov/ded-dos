@@ -11,61 +11,88 @@ ver_line        = 0ebah
 right_down      = 0ebch
 left_down       = 0ec8h
 
-x1              = 10
-x2              = 70
+x1              = 0
+x2              = 24
 y1              = 5
 y2              = 20
 
+d_x             = 80
+d_y             = 25
 ;---
 ;function clear_box:  args: x1, x2, y1, y2, probel
 ;function draw_frame: args: x1, x2, y1, y2, left_up, hor_line, right_up, ver_line, right_down, left_down
 ;function draw_shadow: args: x1, x2, y1, y2, probel
 ;function count_bytes: args: offset; rets: count
+;function print_line: args: x, y, len
 ;---
 .code
 org 100h
 
+
 start:
+                push bp
+                mov bp, sp
+                sub sp, 10
                 ;push 4a61h
+
                 mov ax, 0
-                mov bx, 79
+                mov bx, d_x
+                sub bx, 1
                 mov cx, 0
-                mov dx, 24
+                mov dx, d_y
+                sub dx, 1
                 push probel
                 call clear_box
                 pop ax
 
-                ;mov ax, x1
-                ;mov bx, x2
-                ;mov cx, y1
-                ;mov dx, y2;  4b61
-                ;;push 4a61h
-                ;call clear_box
-
                 mov ax, offset msg
                 call count_bytes
+                push ax
 
+                mov dl, 2
+                div dl
+                mov ah, 0
+                push ax
 
-                ;mov ax, x1+1
-                ;mov bx, x2
-                ;mov cx, y1+1
-                ;mov dx, y2
-                ;push left_down
-                ;push right_down
-                ;push ver_line
-                ;push right_up
-                ;push hor_line
-                ;push left_up
-                ;push 18h
-                ;call draw_shadow
-                mov bx, x1
-                add bx, ax
-                mov cx, y1
-                mov dx, y1
-                add dx, ax
-                mov ax, x1
+                mov ax, d_y
+                mov dl, 2
+                div dl
+                mov ah, 0
+                mov bx, ax
 
+                mov ax, d_x
+                mov dl, 2
+                div dl
+                mov ah, 0
 
+                pop cx
+                sub ax, cx
+
+                pop cx
+                mov [bp-2], ax
+                mov [bp-4], bx
+                mov [bp-6], cx
+                call print_line
+
+                mov ax, [bp-2]
+                mov bx, ax
+                add bx, [bp-6]
+                add bx, 2
+                mov cx, [bp-4]
+                mov dx, cx
+                add dx, 3
+                push 40h
+                call draw_shadow
+
+                mov ax, [bp-2]
+                mov bx, ax
+                sub ax, 1
+                add bx, [bp-6]
+                add bx, 1
+                mov cx, [bp-4]
+                mov dx, cx
+                sub cx, 1
+                add dx, 2
                 push left_down
                 push right_down
                 push ver_line
@@ -73,9 +100,10 @@ start:
                 push hor_line
                 push left_up
                 call draw_frame
+                mov ax, [bp-2]
 
-                mov ax, videoseg
-                mov es, ax
+                mov sp, bp
+                pop bp
 
 done:           mov ax, 4c00h
                 int 21h
@@ -261,9 +289,7 @@ vertical:       stosw
 
 ;; вывод надписи
 ;
-;                mov di, (y1 * 80 + x1 + 2) * 2
-;                mov si, offset msg
-;                mov ah, string_color
+;
 ;again:          lodsb
 ;                cmp al, '$'
 ;                je done
@@ -394,6 +420,7 @@ count_bytes proc
                 mov cx, di
                 mov al, '$'
                 repne scasb
+
                 mov ax, di
                 sub ax, cx
                 sub ax, 2
@@ -408,7 +435,39 @@ count_bytes proc
                 ret
 endp
 ;##
+
+;## args: x, y, len
+print_line proc
+                push bp
+                mov bp, sp
+
+                push ax
+                mov ax, videoseg
+                mov es, ax
+
+                mov ax, bx
+                mov dl, 80
+                mul dl
+                pop bx
+                add ax, bx
+                add ax, ax
+                mov di, ax
+                ;mov di, (y1 * 80 + x1) * 2
+
+                mov ah, string_color
+                mov si, offset msg
+
+pr_again:
+                lodsb
+                stosw
+                loop pr_again
+
+                mov sp, bp
+                pop bp
+                ret
+endp
+;##
 .data
-msg             db '111$'
+msg             db 'Oleg Mikhailovitch Shitikov$'
 
 end start
